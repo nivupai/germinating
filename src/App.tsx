@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { books as allBooks, type Book } from './data/books'
+import { films as allFilms } from './data/films'
 import { Shelf } from './components/Shelf'
 import { BookDetail } from './components/BookDetail'
 import { TypedTitle } from './components/TypedTitle'
@@ -11,11 +12,13 @@ type OpenState = { book: Book; rect: DOMRect; list: Book[] } | null
 
 function App() {
   const [visible, setVisible] = useState<Book[] | null>(null)
+  const [visibleFilms, setVisibleFilms] = useState<Book[] | null>(null)
   const [openState, setOpenState] = useState<OpenState>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const { recommendations, recommend, justAdded } = useRecommendations()
 
   const shown = visible ?? allBooks
+  const shownFilms = visibleFilms ?? allFilms
 
   const handleOpen = (book: Book, rect: DOMRect, list: Book[]) => {
     setOpenState({ book, rect, list })
@@ -47,7 +50,7 @@ function App() {
           <TypedTitle />
           <div className="flex items-center gap-4">
             <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-              {allBooks.length} volumes
+              {allBooks.length} volumes · {allFilms.length} films
             </span>
             <button
               onClick={() => setDialogOpen(true)}
@@ -66,6 +69,21 @@ function App() {
       <main className="relative z-[1] pb-2">
         <Shelf books={shown} onOpen={(book, rect) => handleOpen(book, rect, shown)} />
       </main>
+
+      <section className="relative z-[1] pt-6">
+        <div className="mx-auto max-w-7xl px-6">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Films
+          </p>
+          <div className="mt-4 max-w-xl">
+            <LibraryFilter books={allFilms} onChange={setVisibleFilms} />
+          </div>
+        </div>
+        <Shelf
+          books={shownFilms}
+          onOpen={(book, rect) => handleOpen(book, rect, shownFilms)}
+        />
+      </section>
 
       {recommendations.length > 0 && (
         <section className="relative z-[1] pt-2">

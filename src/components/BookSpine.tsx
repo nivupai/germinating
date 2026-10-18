@@ -31,7 +31,7 @@ export function BookSpine({ book, ry, onOpen }: Props) {
 
   const vertical = book.face === 'mono' ? 'uppercase tracking-wide' : ''
   const showAuthor = book.width >= 44
-  const showPublisher = book.width >= 30
+  const showPublisher = book.width >= 30 && book.publisher.length > 0
 
   return (
     <>
