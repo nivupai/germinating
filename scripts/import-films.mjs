@@ -65,14 +65,9 @@ function rngFrom(seed) {
   }
 }
 
-const PALETTE_FALLBACKS = [
-  ['#1a1a2e', '#533483'],
-  ['#2d132c', '#801336'],
-  ['#0f3057', '#00587a'],
-  ['#3d0c02', '#a0522d'],
-  ['#1b2a21', '#4e6b4f'],
-  ['#2c2c2c', '#6c6c6c'],
-]
+const DVD_CASE_BLACKS = ['#121214', '#17171a', '#1c1c1f', '#141417']
+const DVD_ACCENT_CASES = ['#1c2b3a', '#2a1c1c', '#1c2a1e']
+const DVD_ACCENTS = ['#d7263d', '#2e86ab', '#f4a300', '#4caf7d', '#9b5de5', '#e8594f']
 function luminance([r, g, b]) {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255
 }
@@ -174,20 +169,26 @@ for (const row of watched) {
   const seed = hashKey(uri || id)
   const rng = rngFrom(seed)
 
-  const binding = rng() < 0.5 ? 'paperback' : 'hardcover'
-  const finish = rng() < 0.5 ? 'gloss' : 'matte'
+  // DVD keepcase proportions: thin, uniform width; flat plastic case color
+  const binding = 'paperback'
+  const finish = 'gloss'
   const height = Math.round(214 + rng() * 30)
-  const width = Math.max(16, Math.min(40, Math.round(18 + rng() * 14)))
-  const lean = Math.round(rng() * -5 * 10) / 10
-  const depth = Math.round((rng() * 14 - 7) * 10) / 10
-  const wear = Math.round(rng() * 0.3 * 100) / 100
-  const face = rng() < 0.6 ? 'sans' : rng() < 0.85 ? 'serif' : 'mono'
-  const caps = rng() < 0.5
+  const width = Math.round(14 + rng() * 4)
+  const lean = Math.round(rng() * -2 * 10) / 10
+  const depth = Math.round((rng() * 10 - 5) * 10) / 10
+  const wear = 0
+  const face = 'sans'
+  const caps = true
 
-  const fallback = PALETTE_FALLBACKS[seed % PALETTE_FALLBACKS.length]
-  const spine = fallback[0]
-  const band = fallback[1]
-  const ink = luminance(hexToRgb(spine)) > 0.55 ? '#241f19' : '#faf7f0'
+  const caseRoll = rng()
+  const spine =
+    caseRoll < 0.72
+      ? DVD_CASE_BLACKS[seed % DVD_CASE_BLACKS.length]
+      : caseRoll < 0.92
+        ? '#f4f1ea'
+        : DVD_ACCENT_CASES[seed % DVD_ACCENT_CASES.length]
+  const band = DVD_ACCENTS[seed % DVD_ACCENTS.length]
+  const ink = luminance(hexToRgb(spine)) > 0.55 ? '#1a1a1a' : '#f5f5f3'
 
   const genres = Array.from(
     new Set((scraped?.genres ?? []).map((g) => GENRE_MAP[g]).filter(Boolean)),

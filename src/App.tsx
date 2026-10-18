@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { books as allBooks, type Book } from './data/books'
 import { films as allFilms } from './data/films'
 import { Shelf } from './components/Shelf'
+import { DvdCase } from './components/DvdCase'
 import { BookDetail } from './components/BookDetail'
 import { TypedTitle } from './components/TypedTitle'
 import { LibraryFilter } from './components/LibraryFilter'
@@ -82,6 +83,7 @@ function App() {
         <Shelf
           books={shownFilms}
           onOpen={(book, rect) => handleOpen(book, rect, shownFilms)}
+          SpineComponent={DvdCase}
         />
       </section>
 

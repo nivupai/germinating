@@ -6,13 +6,14 @@ type Props = {
   books: Book[]
   justAdded?: string | null
   onOpen: (book: Book, rect: DOMRect) => void
+  SpineComponent?: typeof BookSpine
 }
 
 const SEGMENT_THRESHOLD = 2600
 const GAP = 2
 const RENDER_BUFFER = 1200
 
-export function Shelf({ books, justAdded, onOpen }: Props) {
+export function Shelf({ books, justAdded, onOpen, SpineComponent = BookSpine }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [rys, setRys] = useState<number[]>([])
   const [overflowing, setOverflowing] = useState(true)
@@ -214,7 +215,7 @@ export function Shelf({ books, justAdded, onOpen }: Props) {
                 } as React.CSSProperties}
               >
                 {inRange && (
-                  <BookSpine book={book} ry={rys[i] ?? 0} onOpen={(rect) => onOpen(book, rect)} />
+                  <SpineComponent book={book} ry={rys[i] ?? 0} onOpen={(rect) => onOpen(book, rect)} />
                 )}
               </div>
             )
