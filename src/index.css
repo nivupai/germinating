@@ -1,0 +1,115 @@
+@import "tailwindcss";
+@source "../src";
+
+@theme inline {
+  --font-display: "Cormorant Garamond", serif;
+  --font-sans: "Karla", sans-serif;
+  --font-mono: "Space Mono", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-glow: var(--glow);
+}
+
+:root {
+  --background: oklch(0.895 0.004 95);
+  --foreground: oklch(0.28 0.008 80);
+  --primary: oklch(0.5 0.085 52);
+  --muted: oklch(0.85 0.006 90);
+  --muted-foreground: oklch(0.5 0.01 85);
+  --border: oklch(0.8 0.006 90);
+  --card: oklch(0.91 0.004 95);
+  --glow: oklch(0.75 0.05 70);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html,
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+body {
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+@utility grain {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(2%, -2%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shelve-in {
+  0% {
+    width: 0px;
+    opacity: 0;
+    transform: translateX(120px) translateZ(60px) rotateY(50deg) rotate(6deg);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    width: var(--spine-w, 30px);
+    opacity: 1;
+    transform: translateX(0) translateZ(0) rotateY(0deg) rotate(0deg);
+  }
+}
+
+@utility animate-rise {
+  animation: rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility animate-shelve-in {
+  animation: shelve-in 1100ms cubic-bezier(0.22, 1, 0.32, 1) both;
+}
+
+@utility animate-drift {
+  animation: drift 18s ease-in-out infinite;
+}
