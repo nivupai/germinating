@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Book } from '../data/books'
 import { BookSpine } from './BookSpine'
 
@@ -9,20 +9,34 @@ type Props = {
 }
 
 const SEGMENT_THRESHOLD = 2600
+const GAP = 2
+const RENDER_BUFFER = 1200
 
 export function Shelf({ books, justAdded, onOpen }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const rowRef = useRef<HTMLDivElement>(null)
   const [rys, setRys] = useState<number[]>([])
   const [overflowing, setOverflowing] = useState(true)
+  const [range, setRange] = useState<[number, number]>([0, 0])
   const dragging = useRef(false)
   const dragStartX = useRef(0)
   const dragScrollLeft = useRef(0)
   const justCopiedOnce = useRef(false)
+  const rafId = useRef<number | null>(null)
 
-  const estWidth = books.reduce((sum, b) => sum + b.width + 2, 0)
+  const estWidth = books.reduce((sum, b) => sum + b.width + GAP, 0)
   const copies = estWidth > SEGMENT_THRESHOLD ? 3 : 1
   const list = copies === 3 ? [...books, ...books, ...books] : books
+
+  // cumulative left offset (within the row, before container padding) + total width
+  const { offsets, totalWidth } = useMemo(() => {
+    const offs: number[] = []
+    let x = 0
+    for (const book of list) {
+      offs.push(x)
+      x += book.width + GAP
+    }
+    return { offsets: offs, totalWidth: x }
+  }, [list])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -35,45 +49,82 @@ export function Shelf({ books, justAdded, onOpen }: Props) {
   }, [books])
 
   useEffect(() => {
+    justCopiedOnce.current = false
+  }, [list])
+
+  useEffect(() => {
     if (copies === 3 && scrollRef.current && !justCopiedOnce.current) {
-      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth / 3
+      scrollRef.current.scrollLeft = totalWidth / 3
       justCopiedOnce.current = true
     }
-  }, [copies, books])
+  }, [copies, totalWidth])
 
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
 
-    const updateCurve = () => {
-      const rect = el.getBoundingClientRect()
-      const center = rect.left + rect.width / 2
-      const spines = Array.from(el.querySelectorAll<HTMLElement>('[data-spine]'))
-      const next = spines.map((s) => {
-        const r = s.getBoundingClientRect()
-        const sCenter = r.left + r.width / 2
-        const dist = (sCenter - center) / (rect.width / 2)
+    const update = () => {
+      rafId.current = null
+      const scrollLeft = el.scrollLeft
+      const clientWidth = el.clientWidth
+
+      // wrap for seamless infinite loop
+      if (copies === 3) {
+        const seg = totalWidth / 3
+        if (scrollLeft < seg * 0.5) {
+          el.scrollLeft += seg
+          return
+        }
+        if (scrollLeft > seg * 1.5) {
+          el.scrollLeft -= seg
+          return
+        }
+      }
+
+      const lo = scrollLeft - RENDER_BUFFER
+      const hi = scrollLeft + clientWidth + RENDER_BUFFER
+      let start = 0
+      let end = offsets.length
+      for (let i = 0; i < offsets.length; i++) {
+        if (offsets[i] + list[i].width >= lo) {
+          start = i
+          break
+        }
+      }
+      for (let i = start; i < offsets.length; i++) {
+        if (offsets[i] > hi) {
+          end = i
+          break
+        }
+      }
+      setRange([start, end])
+
+      const center = scrollLeft + clientWidth / 2
+      const next: number[] = []
+      for (let i = start; i < end; i++) {
+        const itemCenter = offsets[i] + list[i].width / 2
+        const dist = (itemCenter - center) / (clientWidth / 2)
         const clamped = Math.max(-1, Math.min(1, dist))
         const eased = Math.sign(clamped) * Math.pow(Math.abs(clamped), 1.35)
-        return eased * 34
-      })
-      setRys(next)
-
-      if (copies === 3) {
-        const seg = el.scrollWidth / 3
-        if (el.scrollLeft < seg * 0.5) el.scrollLeft += seg
-        else if (el.scrollLeft > seg * 1.5) el.scrollLeft -= seg
+        next[i] = eased * 34
       }
+      setRys(next)
     }
 
-    updateCurve()
-    el.addEventListener('scroll', updateCurve, { passive: true })
-    window.addEventListener('resize', updateCurve)
-    return () => {
-      el.removeEventListener('scroll', updateCurve)
-      window.removeEventListener('resize', updateCurve)
+    const onScroll = () => {
+      if (rafId.current != null) return
+      rafId.current = requestAnimationFrame(update)
     }
-  }, [copies, list.length])
+
+    update()
+    el.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      if (rafId.current != null) cancelAnimationFrame(rafId.current)
+    }
+  }, [copies, totalWidth, offsets, list])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -92,9 +143,11 @@ export function Shelf({ books, justAdded, onOpen }: Props) {
     if (!justAdded) return
     const el = scrollRef.current
     if (!el) return
-    const target = el.querySelector<HTMLElement>(`[data-id="${justAdded}"]`)
-    target?.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' })
-  }, [justAdded])
+    const idx = list.findIndex((b) => b.id === justAdded)
+    if (idx === -1) return
+    const itemCenter = offsets[idx] + list[idx].width / 2
+    el.scrollTo({ left: itemCenter - el.clientWidth / 2, behavior: 'smooth' })
+  }, [justAdded, list, offsets])
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragging.current = true
@@ -145,18 +198,27 @@ export function Shelf({ books, justAdded, onOpen }: Props) {
         }`}
         style={{ perspective: 1400, perspectiveOrigin: '50% 65%' }}
       >
-        <div ref={rowRef} className="flex items-end gap-[2px] pt-16 pb-6 px-6">
-          {list.map((book, i) => (
-            <div
-              key={`${book.id}-${i}`}
-              data-spine
-              data-id={book.id}
-              className={justAdded === book.id ? 'animate-shelve-in' : ''}
-              style={{ '--spine-w': `${book.width}px` } as React.CSSProperties}
-            >
-              <BookSpine book={book} ry={rys[i] ?? 0} onOpen={(rect) => onOpen(book, rect)} />
-            </div>
-          ))}
+        <div className="flex items-end gap-[2px] pt-16 pb-6 px-6">
+          {list.map((book, i) => {
+            const inRange = i >= range[0] && i < range[1]
+            return (
+              <div
+                key={`${book.id}-${i}`}
+                data-id={book.id}
+                className={justAdded === book.id ? 'animate-shelve-in' : ''}
+                style={{
+                  '--spine-w': `${book.width}px`,
+                  width: book.width,
+                  height: inRange ? undefined : book.height,
+                  flexShrink: 0,
+                } as React.CSSProperties}
+              >
+                {inRange && (
+                  <BookSpine book={book} ry={rys[i] ?? 0} onOpen={(rect) => onOpen(book, rect)} />
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
       <div className="h-px mx-auto max-w-4xl bg-gradient-to-r from-transparent via-border to-transparent" />
