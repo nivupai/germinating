@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CatCompanion } from './CatCompanion'
 
 const FULL = 'Welcome to my library'
 
@@ -27,6 +28,7 @@ export function TypedTitle() {
             done ? 'animate-pulse' : 'opacity-80'
           }`}
         />
+        {done && <CatCompanion />}
       </span>
     </h1>
   )
